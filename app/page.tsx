@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { categories } from "../lib/data";
+import { categories } from "@/lib/data";
 
 export default function Home() {
   const serviceCategories = categories.filter(
@@ -8,30 +8,6 @@ export default function Home() {
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10">
-      <header className="mb-10 flex items-center justify-between">
-        <div>
-          <span className="text-2xl font-black text-blue-700">
-            Servio
-          </span>
-        </div>
-
-        <nav className="flex items-center gap-3">
-          <Link
-            href="/explore"
-            className="rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-slate-100"
-          >
-            Explore
-          </Link>
-
-          <Link
-            href="/explore"
-            className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800"
-          >
-            Become a Partner
-          </Link>
-        </nav>
-      </header>
-
       <section className="rounded-3xl bg-white p-8 shadow-sm md:p-14">
         <p className="mb-3 inline-flex rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
           Unified Local Service Marketplace
