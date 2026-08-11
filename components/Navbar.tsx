@@ -6,15 +6,33 @@ import { supabase } from "@/lib/supabase";
 
 export default function Navbar() {
   const [user, setUser] = useState<any>(null);
+  const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
+    async function loadProfile(sessionUser: any) {
+      setUser(sessionUser);
+
+      if (!sessionUser) {
+        setRole(null);
+        return;
+      }
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", sessionUser.id)
+        .single();
+
+      setRole(data?.role ?? null);
+    }
+
     supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
+      loadProfile(data.session?.user ?? null);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        setUser(session?.user ?? null);
+        loadProfile(session?.user ?? null);
       }
     );
 
@@ -40,12 +58,25 @@ export default function Navbar() {
             Explore
           </Link>
 
-                    {user ? (
+          {role === "partner" && (
+            <Link
+              href="/partner/dashboard"
+              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+            >
+              Dashboard
+            </Link>
+          )}
+
+          {user ? (
             <>
-              <Link href="/partner/dashboard" className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700">
-                Dashboard
-              </Link>
-              <button onClick={logout} className="rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-slate-100">
+              <span className="hidden text-sm text-slate-500 md:block">
+                {user.email}
+              </span>
+
+              <button
+                onClick={logout}
+                className="rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-slate-100"
+              >
                 Logout
               </button>
             </>

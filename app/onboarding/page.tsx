@@ -19,15 +19,32 @@ export default function Onboarding() {
   const [message, setMessage] = useState("");
 
   // 🚀 NEW LOGIC: Check if user already completed onboarding
-  useEffect(() => {
+    useEffect(() => {
     async function checkRole() {
       const { data: { user } } = await supabase.auth.getUser();
+
       if (user) {
-        const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-        if (profile?.role === "partner") router.push("/partner/dashboard");
-        else if (profile?.role === "customer") router.push("/explore");
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+
+        if (profile?.role === "partner") {
+          // only redirect if partner profile actually exists
+          const { data: p } = await supabase
+            .from("partners")
+            .select("id")
+            .eq("user_id", user.id)
+            .single();
+
+          if (p) router.push("/partner/dashboard");
+        } else if (profile?.role === "customer") {
+          router.push("/explore");
+        }
       }
     }
+
     checkRole();
   }, [router]);
 
