@@ -1,104 +1,114 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 export default function Navbar() {
   const [user, setUser] = useState<any>(null);
   const [role, setRole] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    async function loadProfile(sessionUser: any) {
-      setUser(sessionUser);
+    async function getUser() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
 
-      if (!sessionUser) {
-        setRole(null);
-        return;
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        setRole(profile?.role || null);
       }
-
-      const { data } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", sessionUser.id)
-        .single();
-
-      setRole(data?.role ?? null);
+      setLoading(false);
     }
 
-    supabase.auth.getSession().then(({ data }) => {
-      loadProfile(data.session?.user ?? null);
+    getUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
+          .single()
+          .then(({ data }) => setRole(data?.role || null));
+      } else {
+        setRole(null);
+      }
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        loadProfile(session?.user ?? null);
-      }
-    );
-
-    return () => listener.subscription.unsubscribe();
+    return () => subscription.unsubscribe();
   }, []);
 
-  async function logout() {
+  async function handleLogout() {
     await supabase.auth.signOut();
+    router.push("/");
+    router.refresh();
   }
 
   return (
-    <header className="border-b bg-white">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-        <Link href="/" className="text-2xl font-black text-blue-700">
+    <nav className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+        <Link href="/" className="text-2xl font-bold text-indigo-600">
           Servio
         </Link>
 
-        <nav className="flex items-center gap-3">
+        <div className="flex items-center gap-6">
           <Link
             href="/explore"
-            className="rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-slate-100"
+            className="text-slate-700 hover:text-indigo-600 font-medium transition-colors"
           >
             Explore
           </Link>
 
-          {role === "partner" && (
+          {!loading && user && role === "customer" && (
             <Link
-              href="/partner/dashboard"
-              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+              href="/my-requests"
+              className="text-slate-700 hover:text-indigo-600 font-medium transition-colors"
             >
-              Dashboard
+              My Requests
             </Link>
           )}
 
-          {user ? (
-            <>
-              <span className="hidden text-sm text-slate-500 md:block">
-                {user.email}
-              </span>
 
-              <button
-                onClick={logout}
-                className="rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-slate-100"
-              >
-                Logout
-              </button>
-            </>
+
+          {!loading && user ? (
+            <button
+              onClick={handleLogout}
+              className="text-slate-700 hover:text-red-600 text-sm font-medium transition-colors"
+            >
+              Logout
+            </button>
           ) : (
-            <>
-              <Link
-                href="/login"
-                className="rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-slate-100"
-              >
-                Login
-              </Link>
-
-              <Link
-                href="/signup"
-                className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800"
-              >
-                Sign Up
-              </Link>
-            </>
+            !loading && (
+              <>
+                <Link
+                  href="/login"
+                  className="text-slate-700 hover:text-indigo-600 font-medium transition-colors"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/signup"
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium transition-colors"
+                >
+                  Sign Up
+                </Link>
+              </>
+            )
           )}
-        </nav>
+        </div>
       </div>
-    </header>
+    </nav>
   );
 }
